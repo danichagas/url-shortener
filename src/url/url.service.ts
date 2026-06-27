@@ -1,26 +1,35 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Url } from './schemas/url.schema';
 import { CreateUrlDto } from './dto/create-url.dto';
 import { UpdateUrlDto } from './dto/update-url.dto';
 
 @Injectable()
 export class UrlService {
-  create(createUrlDto: CreateUrlDto) {
-    return 'This action adds a new url';
-  }
+    constructor(
+      @InjectModel(Url.name) private urlModel: Model<Url>,
+    ) {}
 
-  findAll() {
-    return `This action returns all url`;
-  }
+    async shortenUrl(createUrlDto: CreateUrlDto): Promise<Url> {
+      const { nanoid } = await import('nanoid')
+      const shortCode = nanoid(6)
 
-  findOne(id: number) {
-    return `This action returns a #${id} url`;
-  }
+      const newUrl = new this.urlModel({
+        originalUrl: createUrlDto.originalUrl,
+        shortCode
+      })
 
-  update(id: number, updateUrlDto: UpdateUrlDto) {
-    return `This action updates a #${id} url`;
-  }
+      return newUrl.save()
+    }
 
-  remove(id: number) {
-    return `This action removes a #${id} url`;
-  }
+    async getOriginalUrl(shortCode: string): Promise<Url> {
+      const urlRecord = await this.urlModel.findOne({ shortCode }).exec()
+
+      if (!urlRecord) {
+        throw new NotFoundException('Short URL not found')
+      }
+
+      return urlRecord
+    }
 }

@@ -1,34 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Res, HttpStatus } from '@nestjs/common';
 import { UrlService } from './url.service';
 import { CreateUrlDto } from './dto/create-url.dto';
-import { UpdateUrlDto } from './dto/update-url.dto';
+import type { Response } from 'express';
 
-@Controller('url')
+@Controller()
 export class UrlController {
   constructor(private readonly urlService: UrlService) {}
 
-  @Post()
-  create(@Body() createUrlDto: CreateUrlDto) {
-    return this.urlService.create(createUrlDto);
+  @Post('shorten')
+  async shorten(@Body() createUrlDto: CreateUrlDto) {
+    return this.urlService.shortenUrl(createUrlDto)
   }
 
-  @Get()
-  findAll() {
-    return this.urlService.findAll();
-  }
+  @Get(':code')
+  async redirect(@Param('code') code: string, @Res() res: Response) {
+    const urlRecord = await this.urlService.getOriginalUrl(code)
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.urlService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUrlDto: UpdateUrlDto) {
-    return this.urlService.update(+id, updateUrlDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.urlService.remove(+id);
+    return res.redirect(HttpStatus.FOUND, urlRecord.originalUrl)
   }
 }
